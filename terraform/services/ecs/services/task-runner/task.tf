@@ -8,7 +8,7 @@ resource "aws_ecs_task_definition" "this" {
   container_definitions = jsonencode([
     {
       name      = var.app_name,
-      image     = "569985934894.dkr.ecr.eu-west-1.amazonaws.com/tsk-dev-api-ecr:f8b1885-1732251749" # TODO
+      image     = "" # TODO
       cpu       = var.task_definition.app.cpu,
       memory    = var.task_definition.app.memory,
       essential = true,
@@ -19,14 +19,7 @@ resource "aws_ecs_task_definition" "this" {
           "awslogs-region" : data.aws_region.current.name,
           "awslogs-stream-prefix" : var.app_name
         }
-      },
-      portMappings : [
-        {
-          containerPort : var.port,
-          hostPort : var.port,
-          protocol : "tcp"
-        }
-      ]
+      }
     },
     {
       name      = "xray-sidecar",
@@ -61,9 +54,9 @@ resource "aws_ecs_task_definition" "this" {
     aws_iam_role.task_exec_role
   ]
 
-  # lifecycle {
-  #   ignore_changes = [container_definitions]
-  # }
+  lifecycle {
+    ignore_changes = [container_definitions]
+  }
 }
 
 resource "aws_ecs_service" "this" {
@@ -88,24 +81,18 @@ resource "aws_ecs_service" "this" {
     security_groups = [aws_security_group.service.id]
   }
 
-  load_balancer {
-    container_name   = var.app_name
-    container_port   = var.port
-    target_group_arn = aws_alb_target_group.blue.arn
-  }
-
   depends_on = [
     aws_iam_role.task_role,
     aws_iam_role.task_exec_role
   ]
 
   lifecycle {
-    ignore_changes = [task_definition, load_balancer]
+    ignore_changes = [task_definition]
   }
 }
 
 resource "aws_security_group" "service" {
-  description = "Allow access to the service api"
+  description = "Allow access to the service"
   name        = "${var.prefix}-${var.app_name}-service-sg"
   vpc_id      = var.vpc_id
 
@@ -113,24 +100,6 @@ resource "aws_security_group" "service" {
     tomap({ "Name" = "${var.prefix}-${var.app_name}-svc-sg" }),
     var.tags
   )
-}
-
-resource "aws_vpc_security_group_ingress_rule" "service" {
-  security_group_id = aws_security_group.service.id
-
-  referenced_security_group_id = aws_security_group.alb.id
-  from_port                    = var.port
-  to_port                      = var.port
-  ip_protocol                  = "tcp"
-}
-
-resource "aws_vpc_security_group_egress_rule" "lb_egress" {
-  security_group_id = aws_security_group.service.id
-
-  referenced_security_group_id = aws_security_group.alb.id
-  from_port                    = var.port
-  to_port                      = var.port
-  ip_protocol                  = "tcp"
 }
 
 

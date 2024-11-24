@@ -6,7 +6,7 @@ resource "aws_codedeploy_app" "this" {
   compute_platform = "ECS"
   name             = local.name
 }
-resource "aws_codedeploy_deployment_group" "this" {
+resource "aws_CODEDEPLOY_DEPLOYMENT_GROUP_API" "this" {
   app_name               = aws_codedeploy_app.this.name
   deployment_group_name  = "${local.name}-deploy-group"
   deployment_config_name = "CodeDeployDefault.ECSAllAtOnce"
@@ -53,7 +53,7 @@ resource "aws_codedeploy_deployment_group" "this" {
     }
   }
 
-  
+
 
   tags = var.tags
 }

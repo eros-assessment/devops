@@ -1,4 +1,5 @@
-name: deploy:api
+name: deploy:task-runner
+
 on:
   workflow_dispatch:
     inputs:
@@ -21,7 +22,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           sparse-checkout: |
-            deployments/api
+            deployments/task-runner
 
       # - name: Download artifact
       #   uses: actions/download-artifact@v4
@@ -42,7 +43,7 @@ jobs:
       # - name: Login to ECR
       #   uses: docker/login-action@v3
       #   with:
-      #     registry: ${{ vars.IMAGE_REGISTRY_URL_API }}
+      #     registry: ${{ vars.IMAGE_REGISTRY_URL_TASK_RUNNER }}
 
       # - name: Set up QEMU
       #   uses: docker/setup-qemu-action@v3
@@ -55,7 +56,7 @@ jobs:
       #   id: docker-metadata
       #   with:
       #     images: |
-      #       ${{ vars.IMAGE_REGISTRY_URL_API }}
+      #       ${{ vars.IMAGE_REGISTRY_URL_TASK_RUNNER }}
       #     tags: |
       #       type=raw,value={{sha}}-{{date 'X'}}
 
@@ -91,9 +92,9 @@ jobs:
       #     docker push ${{ steps.docker-metadata.outputs.tags }}
       - name: Update the task-definition"
         run: |
-          NEW_IMAGE="569985934894.dkr.ecr.eu-west-1.amazonaws.com/tsk-dev-api-ecr:f8b1885-1732252760"
-          TASK_FAMILY=${{ vars.TASK_DEF_FAMILY_API }}
-          CONTAINER_NAME_API=${{ vars.CONTAINER_NAME_API }}
+          NEW_IMAGE="569985934894.dkr.ecr.eu-west-1.amazonaws.com/tsk-dev-task-runner-ecr:f8b1885-1732252760"
+          TASK_FAMILY=${{ vars.TASK_DEF_FAMILY_TASK_RUNNER }}
+          CONTAINER_NAME_TASK_RUNNER=${{ vars.CONTAINER_NAME_TASK_RUNNER }}
 
           # Fetch the latest task definition
           LATEST_TASK_DEF=$(aws ecs describe-task-definition --task-definition "$TASK_FAMILY")
@@ -108,7 +109,7 @@ jobs:
           MEMORY=$(echo "$LATEST_TASK_DEF" | jq -r ".taskDefinition.memory")
 
           # Update the container image
-          UPDATED_CONTAINER_DEFINITIONS=$(echo "$CONTAINER_DEFINITIONS" | jq -c --arg cn "$CONTAINER_NAME_API" --arg ni "$NEW_IMAGE" 'map(if .name == $cn then .image = $ni else . end)')
+          UPDATED_CONTAINER_DEFINITIONS=$(echo "$CONTAINER_DEFINITIONS" | jq -c --arg cn "$CONTAINER_NAME_TASK_RUNNER" --arg ni "$NEW_IMAGE" 'map(if .name == $cn then .image = $ni else . end)')
 
           # Save updated container definitions to a file
           CONTAINER_DEFINITIONS_FILE="container-definitions.json"
@@ -133,8 +134,8 @@ jobs:
           echo "New Task Definition ARN: $NEW_TASK_DEF_ARN"
           APPSPEC_FILE="appspec.yaml"
           cat > "$APPSPEC_FILE" <<EOL
-          applicationName: ${{ vars.CODEDEPLOY_APP_NAME_API }}
-          deploymentGroupName: ${{ vars.CODEDEPLOY_DEPLOYMENT_GROUP_API }}
+          applicationName: ${{ vars.CODEDEPLOY_APP_NAME_TASK_RUNNER }}
+          deploymentGroupName: ${{ vars.CODEDEPLOY_DEPLOYMENT_GROUP_TASK_RUNNER }}
           revision:
             revisionType: AppSpecContent
             appSpecContent:
@@ -146,7 +147,7 @@ jobs:
                       Properties:
                         TaskDefinition: $NEW_TASK_DEF_ARN
                         LoadBalancerInfo:
-                          ContainerName: $CONTAINER_NAME_API
+                          ContainerName: $CONTAINER_NAME_TASK_RUNNER
                           ContainerPort: 3000
           EOL
 

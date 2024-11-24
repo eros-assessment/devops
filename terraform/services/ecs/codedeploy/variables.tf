@@ -31,5 +31,5 @@ variable "alb_target_group_names" {
 }
 
 variable "tags" {
-    type = map(any)  
+  type = map(any)
 }
